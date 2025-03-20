@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indonesian Simulator 2025 Edition</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 16px;
+            overflow: hidden;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            margin-bottom: clamp(1rem, 5vh, 2rem);
+            text-align: center;
+            width: 100%;
+            max-width: 800px;
+        }
+        
+        button {
+            background-color: #333333;
+            color: white;
+            border: none;
+            padding: clamp(10px, 3vw, 20px) clamp(15px, 5vw, 30px);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: clamp(0.9rem, 3vw, 1.1rem);
+            transition: background-color 0.3s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        button:hover {
+            background-color: #444444;
+        }
+        
+        button:active {
+            background-color: #555555;
+            transform: scale(0.98);
+        }
+        
+        button:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+        }
+        
+        .muted {
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
+        /* Add safe area insets for mobile devices with notches */
+        @supports (padding: max(0px)) {
+            body {
+                padding-left: max(16px, env(safe-area-inset-left));
+                padding-right: max(16px, env(safe-area-inset-right));
+                padding-top: max(16px, env(safe-area-inset-top));
+                padding-bottom: max(16px, env(safe-area-inset-bottom));
+            }
+        }
+        
+        /* Media query for very small screens */
+        @media (max-height: 400px) {
+            body {
+                justify-content: flex-start;
+                padding-top: max(30px, env(safe-area-inset-top));
+            }
+            
+            h1 {
+                margin-bottom: 15px;
+            }
+        }
+        
+        .attribution {
+            position: fixed;
+            bottom: max(10px, env(safe-area-inset-bottom));
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Indonesian Simulator 2025 Edition</h1>
+    
+    <button id="muteButton">Begin Immersive Experience</button>
+    
+    <div class="attribution">built with rage by rahx@utexas.edu</div>
+    
+    <audio id="backgroundAudio" loop>
+        <!-- Main background audio that plays continuously -->
+        <source src="scream.wav" type="audio/wav">
+        Your browser does not support the audio element.
+    </audio>
+    
+    <audio id="occasionalAudio">
+        <!-- This audio plays occasionally with a 5% chance -->
+        <source src="ps.wav" type="audio/wav">
+        Your browser does not support the audio element.
+    </audio>
+    
+    <script>
+        const mainAudio = document.getElementById('backgroundAudio');
+        const occasionalAudio = document.getElementById('occasionalAudio');
+        const muteButton = document.getElementById('muteButton');
+        let audioInitialized = false;
+        let isMuted = false;
+        
+        // Function to check if occasional sound should play (10% chance as in your updated code)
+        function checkOccasionalSound() {
+            if (!isMuted && audioInitialized) {
+                const random = Math.random() * 100;
+                
+                // 10% chance to play the occasional sound
+                if (random <= 10) {
+                    occasionalAudio.currentTime = 0;
+                    occasionalAudio.play();
+                }
+            }
+            
+            // Check again after a random interval (between 5-15 seconds)
+            const nextCheck = 5000 + Math.random() * 10000;
+            setTimeout(checkOccasionalSound, nextCheck);
+        }
+        
+        // Fix audio playback on iOS
+        function unlockAudio() {
+            mainAudio.play().then(() => {
+                mainAudio.pause();
+                mainAudio.currentTime = 0;
+            }).catch(err => console.log("Audio unlock failed", err));
+            
+            occasionalAudio.play().then(() => {
+                occasionalAudio.pause();
+                occasionalAudio.currentTime = 0;
+            }).catch(err => console.log("Audio unlock failed", err));
+            
+            document.removeEventListener('touchstart', unlockAudio);
+        }
+        
+        // Add iOS audio unlock
+        document.addEventListener('touchstart', unlockAudio);
+        
+        // Handle the button click
+        muteButton.addEventListener('click', () => {
+            // First click - start the audio
+            if (!audioInitialized) {
+                const playPromise = mainAudio.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        audioInitialized = true;
+                        muteButton.textContent = 'Mute';
+                        
+                        // Start the occasional sound check timer
+                        checkOccasionalSound();
+                    }).catch(error => {
+                        console.error("Audio play failed:", error);
+                        // Retry
+                        setTimeout(() => muteButton.click(), 100);
+                    });
+                }
+                return;
+            }
+            
+            // Toggle mute/unmute on subsequent clicks
+            if (isMuted) {
+                mainAudio.muted = false;
+                occasionalAudio.muted = false;
+                isMuted = false;
+                muteButton.textContent = 'Mute';
+                muteButton.classList.remove('muted');
+            } else {
+                mainAudio.muted = true;
+                occasionalAudio.muted = true;
+                isMuted = true;
+                muteButton.textContent = 'Unmute';
+                muteButton.classList.add('muted');
+            }
+        });
+        
+        // Prevent scrolling on iOS when tapping the button
+        document.body.addEventListener('touchmove', function(e) {
+            if (e.target === muteButton) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>
