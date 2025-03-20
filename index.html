@@ -63,14 +63,6 @@
             text-decoration: line-through;
             opacity: 0.7;
         }
-        
-        .attribution {
-            position: fixed;
-            bottom: max(10px, env(safe-area-inset-bottom));
-            font-size: 0.8rem;
-            opacity: 0.7;
-            margin-top: 2rem;
-        }
 
         /* Add safe area insets for mobile devices with notches */
         @supports (padding: max(0px)) {
@@ -93,6 +85,14 @@
                 margin-bottom: 15px;
             }
         }
+        
+        .attribution {
+            position: fixed;
+            bottom: max(10px, env(safe-area-inset-bottom));
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 2rem;
+        }
     </style>
 </head>
 <body>
@@ -102,49 +102,34 @@
     
     <div class="attribution">built with rage by rahx@utexas.edu</div>
     
-    <!-- Audio elements with preload="none" to prevent auto-loading -->
-    <audio id="backgroundAudio" preload="none">
+    <audio id="backgroundAudio" loop>
+        <!-- Main background audio that plays continuously -->
         <source src="scream.wav" type="audio/wav">
         Your browser does not support the audio element.
     </audio>
     
-    <audio id="occasionalAudio" preload="none">
+    <audio id="occasionalAudio">
+        <!-- This audio plays occasionally with a 5% chance -->
         <source src="ps.wav" type="audio/wav">
         Your browser does not support the audio element.
     </audio>
     
     <script>
-        // Get DOM elements
         const mainAudio = document.getElementById('backgroundAudio');
         const occasionalAudio = document.getElementById('occasionalAudio');
         const muteButton = document.getElementById('muteButton');
         let audioInitialized = false;
         let isMuted = false;
         
-        // Prevent any potential automatic playing
-        mainAudio.pause();
-        occasionalAudio.pause();
-        
-        // Function to check if occasional sound should play (10% chance)
+        // Function to check if occasional sound should play (10% chance as in your updated code)
         function checkOccasionalSound() {
             if (!isMuted && audioInitialized) {
                 const random = Math.random() * 100;
                 
                 // 10% chance to play the occasional sound
                 if (random <= 10) {
-                    // First stop any current playback
-                    occasionalAudio.pause();
                     occasionalAudio.currentTime = 0;
-                    
-                    // Play the sound
-                    const playPromise = occasionalAudio.play();
-                    
-                    // Handle promise for browsers that return a promise
-                    if (playPromise !== undefined) {
-                        playPromise.catch(e => {
-                            console.log("Occasional sound play failed:", e);
-                        });
-                    }
+                    occasionalAudio.play();
                 }
             }
             
@@ -153,19 +138,32 @@
             setTimeout(checkOccasionalSound, nextCheck);
         }
         
-        // Initialize audio only when the button is clicked
+        // Fix audio playback on iOS
+        function unlockAudio() {
+            mainAudio.play().then(() => {
+                mainAudio.pause();
+                mainAudio.currentTime = 0;
+            }).catch(err => console.log("Audio unlock failed", err));
+            
+            occasionalAudio.play().then(() => {
+                occasionalAudio.pause();
+                occasionalAudio.currentTime = 0;
+            }).catch(err => console.log("Audio unlock failed", err));
+            
+            document.removeEventListener('touchstart', unlockAudio);
+        }
+        
+        // Add iOS audio unlock
+        document.addEventListener('touchstart', unlockAudio);
+        
+        // Handle the button click
         muteButton.addEventListener('click', () => {
             // First click - start the audio
             if (!audioInitialized) {
-                // Set loop property via JS to ensure it's set after user interaction
-                mainAudio.loop = true;
-                
-                // Start the main audio
                 const playPromise = mainAudio.play();
                 
                 if (playPromise !== undefined) {
                     playPromise.then(() => {
-                        console.log("Audio started successfully");
                         audioInitialized = true;
                         muteButton.textContent = 'Mute';
                         
@@ -173,13 +171,9 @@
                         checkOccasionalSound();
                     }).catch(error => {
                         console.error("Audio play failed:", error);
-                        // Don't auto-retry, just keep the button as-is for user to try again
+                        // Retry
+                        setTimeout(() => muteButton.click(), 100);
                     });
-                } else {
-                    // For older browsers that don't return a promise
-                    audioInitialized = true;
-                    muteButton.textContent = 'Mute';
-                    checkOccasionalSound();
                 }
                 return;
             }
@@ -200,17 +194,12 @@
             }
         });
         
-        // Prevent scrolling when interacting with the button
-        muteButton.addEventListener('touchstart', function(e) {
-            e.preventDefault();
+        // Prevent scrolling on iOS when tapping the button
+        document.body.addEventListener('touchmove', function(e) {
+            if (e.target === muteButton) {
+                e.preventDefault();
+            }
         }, { passive: false });
-        
-        // Additional iOS Safari handling - only creates audio contexts after user interaction
-        document.addEventListener('DOMContentLoaded', function() {
-            // Ensure audios are paused initially
-            mainAudio.pause();
-            occasionalAudio.pause();
-        });
     </script>
 </body>
 </html>
